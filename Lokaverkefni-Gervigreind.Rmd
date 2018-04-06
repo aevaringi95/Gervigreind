@@ -1,0 +1,158 @@
+---
+title: "Lokaverkefni-Gervigreind"
+author: "Ævar Ingi Jóhannesson"
+date: "4/6/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r, warning = F, message = F}
+library(plyr); library(dplyr); library(lubridate)
+library(ggplot2)
+library(grid)
+library(gridExtra)
+library(glmnet)
+library(e1071)
+library(randomForest)
+library(knitr)
+library(gbm)
+library(corrplot)
+```
+
+## Read data:
+
+116 categorical og 14 continous. ID og Loss 
+
+```{r}
+data = read.csv("train.csv")
+data = data[,2:132]
+data.submit = read.csv("test.csv")
+id=data.submit$id
+```
+
+
+## Data
+
+```{r}
+data.cont = data[,117:131]
+data.cat = data[,c(72:80,131)]
+loss = data$loss
+```
+
+```{r}
+corr = cor(data.cont)
+corrplot(corr)
+#Remove one of the variables: 1 or 9,   11 or 12
+
+```
+
+```{r}
+ggplot(data=data, aes(x=cont11,y=cont12))+
+  geom_point()
+
+ggplot(data=data, aes(x=cont11,y=log(loss)))+
+  geom_point()
+```
+
+
+```{r}
+set.seed(1000)
+data.cat = data[,c(80:116,131)] #73 74
+n = dim(data)[1]
+train = sample(n,floor(n*0.7))
+data.train.cat = data.cat[train,]
+data.test.cat = data.cat[-train,]
+
+
+fit.lm <- lm(loss~.,data=data.cat)
+summary(fit.lm)
+
+#pred.lm = predict(fit.lm, data.test.cat)
+#MAE = mean(abs(data.test.cat$loss - pred.lm))
+#MAE
+
+
+#pred.submit
+
+
+
+
+```
+
+
+##Lasso
+
+```{r}
+set.seed(1000)
+ytrain = data.matrix(data[,"loss"])
+Xtrain = data.matrix(data[,!(colnames(data) %in% c("loss"))])
+Xtest = data.matrix(dat.test[,!(colnames(dat.train) %in% c("nuvirdi"))])
+grid = 10^seq(1, -20, length=1000)
+fit.lasso = cv.glmnet(Xtrain,ytrain,alpha=1, lambda=grid, thresh=1e-12)
+plot(fit.lasso)
+
+best.model = glmnet(Xtrain, ytrain, alpha = 1)
+predict(best.model, s = fit.lasso$lambda.min, type = "coefficients")
+
+```
+
+
+
+
+##Boosting.
+
+```{r}
+set.seed(5040)
+lambd <-  seq(0.001, 0.02, by=0.001)
+lambd <- c(lambd, seq(0.02, 0.5, by=0.01))
+m <- length(lambd)
+testErr <- rep(NA, m)
+testErrN <- rep(NA, m)
+for (i in 1:m) {
+    boostCol = gbm(nuvirdi ~ ., data = dat.train,
+                    distribution = "gaussian",
+                    n.trees = 200, 
+                    shrinkage = lambd[i])
+    testPred = predict(boostCol, dat.test, n.trees = 200)
+    testErr[i] = mean((exp(dat.test$nuvirdi) - exp(testPred))^2)
+}
+
+bestLam = lambd[which.min(testErr)]
+bestLamN = lambd[which.min(testErrN)]
+
+boostPlot =ggplot(data.frame(x=lambd, y=testErr), aes(x=x, y=y)) +
+            xlab("Shrinkage") + 
+            ylab("Test MSE") + 
+            geom_point()
+
+boostPlot2 = ggplot(data.frame(x=lambd, y=testErrN), aes(x=x, y=y)) +
+              xlab("Shrinkage") + 
+              ylab("Test MSE(Normal)") + 
+              geom_point()
+
+grid.arrange(boostPlot,
+             boostPlot2,ncol=2)
+```
+
+```{r,eval = T}
+set.seed(1000)
+boost.fit <- gbm(loss ~ ., data = data, distribution = "gaussian",
+                 n.trees = 200, shrinkage =0.26 )
+boost.pred <- predict(boost.fit, data.submit, n.trees = 200)
+MAEBoost = mean((exp(dat.test$nuvirdi) - exp(boost.pred))^2)
+```
+
+
+
+##SUBMIT
+
+```{r}
+pred.submit = predict(fit.lm,data.submit.cat)
+Submit= data.frame(id,loss=boost.pred)
+write.csv(Submit,file="Submit.csv",row.names=FALSE)
+```
+
