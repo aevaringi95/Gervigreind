@@ -39,6 +39,8 @@ id=data.submit$id
 
 ```{r}
 data.cont = data[,117:131]
+data.small = data[,c(1:70,117:131)]
+delete = names(data)[c(1,2,5,6,7,10,11,12,13,14)]
 data.cat = data[,c(72:80,131)]
 loss = data$loss
 ```
@@ -67,10 +69,6 @@ train = sample(n,floor(n*0.7))
 data.train.cat = data.cat[train,]
 data.test.cat = data.cat[-train,]
 
-
-fit.lm <- lm(loss~.,data=data.cat)
-summary(fit.lm)
-
 #pred.lm = predict(fit.lm, data.test.cat)
 #MAE = mean(abs(data.test.cat$loss - pred.lm))
 #MAE
@@ -84,66 +82,94 @@ summary(fit.lm)
 ```
 
 
+##Using Small data set.
+
+```{r}
+set.seed(1000)
+data.small = data[,c(1:70,117:131)]
+n = dim(data.small)[1]
+train = sample(n,floor(n*0.75))
+train.small = data.small[train,]
+test.small = data.small[-train,]
+n2 = dim(train.small)[1]
+val = sample(n2,floor(n2*0.8))
+val.small = train.small[-val,]
+train.small = train.small[val,]
+
+
+fit.lm <- lm(loss~.,data=data.small)
+
+pred.lm = predict(fit.lm, test.small)
+MAElinear = mean(abs(test.small$loss - pred.lm))
+MAElinear
+
+
+
+
+```
+
 ##Lasso
 
 ```{r}
 set.seed(1000)
-ytrain = data.matrix(data[,"loss"])
-Xtrain = data.matrix(data[,!(colnames(data) %in% c("loss"))])
-Xtest = data.matrix(dat.test[,!(colnames(dat.train) %in% c("nuvirdi"))])
-grid = 10^seq(1, -20, length=1000)
-fit.lasso = cv.glmnet(Xtrain,ytrain,alpha=1, lambda=grid, thresh=1e-12)
+ytrain.small = data.matrix(train.small[,"loss"])
+Xtrain.small = data.matrix(train.small[,!(colnames(train.small) %in% c("loss"))])
+Xtest.small = data.matrix(test.small[,!(colnames(train.small) %in% c("loss"))])
+grid = 10^seq(4, -20, length=1000)
+fit.lasso = cv.glmnet(Xtrain.small,ytrain.small,alpha=1, lambda=grid, thresh=1e-12)
 plot(fit.lasso)
 
-best.model = glmnet(Xtrain, ytrain, alpha = 1)
-predict(best.model, s = fit.lasso$lambda.min, type = "coefficients")
+best.model = glmnet(Xtrain.small, ytrain.small, alpha = 1)
+predict(best.model, s = fit.lasso$lambda.1se, type = "coefficients")
+
+best.lambda=fit.lasso$lambda.min
+pred.lasso = predict(fit.lasso,Xtest.small,s=fit.lasso$lambda.1se)
+MAELasso = mean(abs(test.small$loss - pred.lasso))
+MAELasso
+
+
 
 ```
-
-
 
 
 ##Boosting.
 
 ```{r}
-set.seed(5040)
-lambd <-  seq(0.001, 0.02, by=0.001)
-lambd <- c(lambd, seq(0.02, 0.5, by=0.01))
+set.seed(1000)
+lambd <-  seq(0.05, 0.5, by=0.05)
 m <- length(lambd)
 testErr <- rep(NA, m)
-testErrN <- rep(NA, m)
 for (i in 1:m) {
-    boostCol = gbm(nuvirdi ~ ., data = dat.train,
+    boostCol = gbm(loss ~ ., data = train.small,
                     distribution = "gaussian",
                     n.trees = 200, 
                     shrinkage = lambd[i])
-    testPred = predict(boostCol, dat.test, n.trees = 200)
-    testErr[i] = mean((exp(dat.test$nuvirdi) - exp(testPred))^2)
+    testPred = predict(boostCol, val.small, n.trees = 200)
+    testErr[i] = mean(abs(val.small$loss - testPred))
+    print(i)
 }
 
 bestLam = lambd[which.min(testErr)]
-bestLamN = lambd[which.min(testErrN)]
 
 boostPlot =ggplot(data.frame(x=lambd, y=testErr), aes(x=x, y=y)) +
             xlab("Shrinkage") + 
             ylab("Test MSE") + 
             geom_point()
 
-boostPlot2 = ggplot(data.frame(x=lambd, y=testErrN), aes(x=x, y=y)) +
-              xlab("Shrinkage") + 
-              ylab("Test MSE(Normal)") + 
-              geom_point()
 
-grid.arrange(boostPlot,
-             boostPlot2,ncol=2)
+boostPlot
 ```
 
 ```{r,eval = T}
 set.seed(1000)
-boost.fit <- gbm(loss ~ ., data = data, distribution = "gaussian",
-                 n.trees = 200, shrinkage =0.26 )
-boost.pred <- predict(boost.fit, data.submit, n.trees = 200)
-MAEBoost = mean((exp(dat.test$nuvirdi) - exp(boost.pred))^2)
+boost.fit <- gbm(loss ~ ., data = train.small,
+                 distribution = "gaussian",
+                 n.trees = 1000, shrinkage =0.5 )
+boost.pred <- predict(boost.fit,
+                      test.small,
+                      n.trees = 1000)
+MAEBoost = mean(abs(test.small$loss - boost.pred))
+MAEBoost
 ```
 
 
