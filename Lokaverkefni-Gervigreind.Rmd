@@ -224,54 +224,30 @@ data.try$cont12 = NULL
 data.try$cat92 = NULL
 
 #taka út alla sem gefa NA gildi
-cat74 = data.try$cat74 
-cat81 = data.try$cat81 
-cat85 = data.try$cat85 
-cat87 = data.try$cat87 
-cat89 = data.try$cat89 
-cat90 = data.try$cat90 
-cat91 = data.try$cat91 
-cat92 = data.try$cat92 
-cat98 = data.try$cat98 
-cat99 = data.try$cat99 
-cat100 = data.try$cat100 
-cat101 = data.try$cat101 
-cat102 = data.try$cat102 
-cat103 = data.try$cat103 
-cat104 = data.try$cat104 
-cat106 = data.try$cat106 
-cat107 = data.try$cat107 
-cat108 = data.try$cat108 
-cat111 = data.try$cat111 
-cat113 = data.try$cat113 
-cat114 = data.try$cat114 
-cat115 = data.try$cat115 
-cat116 = data.try$cat116 
+cat74 = data.try$cat74; data.try$cat74 = NULL
+cat81 = data.try$cat81; data.try$cat81 = NULL
+cat85 = data.try$cat85; data.try$cat85 = NULL
+cat87 = data.try$cat87; data.try$cat87 = NULL
+cat89 = data.try$cat89; data.try$cat89 = NULL
+cat90 = data.try$cat90; data.try$cat90 = NULL
+cat91 = data.try$cat91; data.try$cat91 = NULL
+cat92 = data.try$cat92; data.try$cat92 = NULL
+cat98 = data.try$cat98; data.try$cat98 = NULL
+cat99 = data.try$cat99; data.try$cat99 = NULL
+cat100 = data.try$cat100; data.try$cat100 = NULL 
+cat101 = data.try$cat101; data.try$cat101 = NULL 
+cat102 = data.try$cat102; data.try$cat102 = NULL
+cat103 = data.try$cat103; data.try$cat103 = NULL 
+cat104 = data.try$cat104; data.try$cat104 = NULL 
+cat106 = data.try$cat106; data.try$cat106 = NULL
+cat107 = data.try$cat107; data.try$cat107 = NULL
+cat108 = data.try$cat108; data.try$cat108 = NULL
+cat111 = data.try$cat111; data.try$cat111 = NULL
+cat113 = data.try$cat113; data.try$cat113 = NULL
+cat114 = data.try$cat114; data.try$cat114 = NULL
+cat115 = data.try$cat115; data.try$cat115 = NULL
+cat116 = data.try$cat116; data.try$cat116 = NULL
 
-
-data.try$cat74 = NULL
-data.try$cat81 = NULL
-data.try$cat85 = NULL
-data.try$cat87 = NULL
-data.try$cat89 = NULL
-data.try$cat90 = NULL
-data.try$cat91 = NULL
-data.try$cat92 = NULL
-data.try$cat98 = NULL
-data.try$cat99 = NULL
-data.try$cat100 = NULL
-data.try$cat101 = NULL
-data.try$cat102 = NULL
-data.try$cat103 = NULL
-data.try$cat104 = NULL
-data.try$cat106 = NULL
-data.try$cat107 = NULL
-data.try$cat108 = NULL
-data.try$cat111 = NULL
-data.try$cat113 = NULL
-data.try$cat114 = NULL
-data.try$cat115 = NULL
-data.try$cat116 = NULL
 
 data.try = data.frame(data.try, cat115)
 
