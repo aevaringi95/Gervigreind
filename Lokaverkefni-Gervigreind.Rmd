@@ -7,6 +7,7 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+rm(list = ls())
 ```
 
 
@@ -21,44 +22,293 @@ library(randomForest)
 library(knitr)
 library(gbm)
 library(corrplot)
+library(caret)
+library(mlbench)
+library(tictoc)
+library(gdata)
 ```
 
-## Read data:
-
-116 categorical og 14 continous. ID og Loss 
+## Load data:
 
 ```{r}
 data = read.csv("train.csv")
-data = data[,2:132]
+#remove ID column
+data$id = NULL
 data.submit = read.csv("test.csv")
-id=data.submit$id
+```
+
+```{r}
+head(data)[1:5,]
+```
+
+116 categorical variables,  14 continous and Loss. 
+
+Check for NA values
+
+```{r}
+dim(na.omit(data)) == dim(data)
+```
+
+Check distribution of response
+
+```{r}
+density1 <- ggplot(data,aes(loss))+
+  geom_density()
+
+density2 <- ggplot(data,aes(log(loss)))+
+  geom_density()
+
+grid.arrange(density1,density2,nrow=2)
+```
+
+```{r}
+skewness(data$loss)
+skewness(log(data$loss))
+skewness(log(1+data$loss))
+
+which(data$loss<1)
+#þar er bara eit loss gildi milli 0 og 1. 
+data$loss = log(data$loss)
+```
+
+## Descriptive plots
+
+Continuous variables
+```{r}
+p1 = ggplot(data=data, aes(x=cont2,y=loss))+
+      geom_point()
+
+p2 = ggplot(data=data, aes(x=cont3,y=loss))+
+      geom_point()
+
+p3 = ggplot(data=data, aes(x=cont13,y=loss))+
+      geom_point()
+grid.arrange(p1,p2,p3,nrow = 1)
+```
+
+Boxplots of categorical variables
+```{r}
+ggplot(data=data, aes(x=cat3,y=loss))+
+  geom_boxplot()
+
+ggplot(data=data, aes(x=cat7,y=loss))+
+  geom_boxplot()
+
+ggplot(data=data, aes(x=cat14,y=loss))+
+  geom_boxplot()
+
+ggplot(data=data, aes(x=cat15,y=loss))+
+  geom_boxplot()
+
+ggplot(data=data, aes(x=cat79,y=loss))+
+  geom_boxplot()
+
+ggplot(data=data, aes(x=cat75,y=loss))+
+  geom_boxplot()
+
+table(data$cat75)
+
+ggplot(data=data, aes(x=cat77,y=loss))+
+  geom_boxplot()
+
+ggplot(data=data, aes(x=cat87,y=loss))+
+  geom_boxplot()
+
+ggplot(data=data, aes(x=cat89,y=loss))+
+  geom_boxplot()
+
+table(data$cat89)
+
+ggplot(data=data, aes(x=cat90,y=loss))+
+  geom_boxplot()
+
+ggplot(data=data, aes(x=cat93,y=loss))+
+  geom_boxplot()
+
+ggplot(data=data, aes(x=cat100,y=loss))+
+  geom_boxplot()
+
+ggplot(data=data, aes(x=cat101,y=loss))+
+  geom_boxplot()
+
+ggplot(data=data, aes(x=cat102,y=loss))+
+  geom_boxplot()
+
+table(data$cat102)
+
+ggplot(data=data, aes(x=cat103,y=loss))+
+  geom_boxplot()
+
+ggplot(data=data, aes(x=cat104,y=loss))+
+  geom_boxplot()
+
+ggplot(data=data, aes(x=cat105,y=loss))+
+  geom_boxplot()
+
+table(data$cat105)
+
+ggplot(data=data, aes(x=cat106,y=loss))+
+  geom_boxplot()
+
+ggplot(data=data, aes(x=cat110,y=loss))+
+  geom_boxplot()
+```
+
+Barplots of categorical variables
+```{r}
+ggplot(data=data, aes(cat1))+
+  geom_bar()
+```
+
+## Correlation
+
+```{r}
+data.cont = data[,117:131]
+cormat = cor(data.cont[,-15])
+corrplot(cormat)
+highCor = findCorrelation(cormat, cutoff = 0.9)
+highCor
+#Remove one of the variables: 1 or 9,   11 or 12, 6 og 10?
+#hvað með að nota pca á continuous? 
+```
+
+```{r}
+data.try = data
+
+for(i in 1:116){
+  var = eval(parse(text = paste("data.try$cat",as.character(i),sep="")))
+  print(i)
+  print(table(var))
+}
+
+data.try = data.try[data.try$cat75 %in% names(which(table(data.try$cat75) > 10)), ]
+data.try = data.try[data.try$cat88 %in% names(which(table(data.try$cat88) > 10)), ]
+data.try = data.try[data.try$cat89 %in% names(which(table(data.try$cat89) > 10)), ]
+data.try = data.try[data.try$cat90 %in% names(which(table(data.try$cat90) > 10)), ]
+data.try = data.try[data.try$cat92 %in% names(which(table(data.try$cat92) > 10)), ]
+data.try = data.try[data.try$cat99 %in% names(which(table(data.try$cat99) > 10)), ]
+data.try = data.try[data.try$cat101 %in% names(which(table(data.try$cat101) > 10)), ]
+data.try = data.try[data.try$cat102 %in% names(which(table(data.try$cat102) > 10)), ]
+data.try = data.try[data.try$cat103 %in% names(which(table(data.try$cat103) > 10)), ]
+data.try = data.try[data.try$cat104 %in% names(which(table(data.try$cat104) > 10)), ]
+data.try = data.try[data.try$cat105 %in% names(which(table(data.try$cat105) > 10)), ]
+data.try = data.try[data.try$cat106 %in% names(which(table(data.try$cat106) > 10)), ]
+data.try = data.try[data.try$cat107 %in% names(which(table(data.try$cat107) > 10)), ]
+data.try = data.try[data.try$cat109 %in% names(which(table(data.try$cat109) > 10)), ]
+data.try = data.try[data.try$cat110 %in% names(which(table(data.try$cat110) > 10)), ]
+data.try = data.try[data.try$cat111 %in% names(which(table(data.try$cat111) > 10)), ]
+data.try = data.try[data.try$cat113 %in% names(which(table(data.try$cat113) > 10)), ]
+data.try = data.try[data.try$cat114 %in% names(which(table(data.try$cat114) > 10)), ]
+data.try = data.try[data.try$cat115 %in% names(which(table(data.try$cat115) > 10)), ]
+data.try = data.try[data.try$cat116 %in% names(which(table(data.try$cat116) > 10)), ]
+
+data.try$cat75  = droplevels(data.try$cat75) ; data.try$cat88  = droplevels(data.try$cat88)
+data.try$cat89  = droplevels(data.try$cat89) ; data.try$cat90  = droplevels(data.try$cat90)
+data.try$cat92  = droplevels(data.try$cat92) ; data.try$cat99  = droplevels(data.try$cat99)
+data.try$cat101 = droplevels(data.try$cat101); data.try$cat102 = droplevels(data.try$cat102)
+data.try$cat103 = droplevels(data.try$cat103); data.try$cat104 = droplevels(data.try$cat104)
+data.try$cat105 = droplevels(data.try$cat105); data.try$cat106 = droplevels(data.try$cat106)
+data.try$cat107 = droplevels(data.try$cat107); data.try$cat109 = droplevels(data.try$cat109)
+data.try$cat110 = droplevels(data.try$cat110); data.try$cat111 = droplevels(data.try$cat111)
+data.try$cat113 = droplevels(data.try$cat113); data.try$cat114 = droplevels(data.try$cat114)
+data.try$cat115 = droplevels(data.try$cat115); data.try$cat116 = droplevels(data.try$cat116)
+
+
+#lev = levels(data.try$cat75)[c(1,2)]
+#data.try = data.try[which(data.try$cat75 %in% lev),]
+#data.try$cat75 = droplevels(data.try$cat75)
+
+#drop highly correlated variables
+data.try$cont9 = NULL
+data.try$cont12 = NULL
+data.try$cat92 = NULL
+
+#taka út alla sem gefa NA gildi
+cat74 = data.try$cat74 
+cat81 = data.try$cat81 
+cat85 = data.try$cat85 
+cat87 = data.try$cat87 
+cat89 = data.try$cat89 
+cat90 = data.try$cat90 
+cat91 = data.try$cat91 
+cat92 = data.try$cat92 
+cat98 = data.try$cat98 
+cat99 = data.try$cat99 
+cat100 = data.try$cat100 
+cat101 = data.try$cat101 
+cat102 = data.try$cat102 
+cat103 = data.try$cat103 
+cat104 = data.try$cat104 
+cat106 = data.try$cat106 
+cat107 = data.try$cat107 
+cat108 = data.try$cat108 
+cat111 = data.try$cat111 
+cat113 = data.try$cat113 
+cat114 = data.try$cat114 
+cat115 = data.try$cat115 
+cat116 = data.try$cat116 
+
+
+data.try$cat74 = NULL
+data.try$cat81 = NULL
+data.try$cat85 = NULL
+data.try$cat87 = NULL
+data.try$cat89 = NULL
+data.try$cat90 = NULL
+data.try$cat91 = NULL
+data.try$cat92 = NULL
+data.try$cat98 = NULL
+data.try$cat99 = NULL
+data.try$cat100 = NULL
+data.try$cat101 = NULL
+data.try$cat102 = NULL
+data.try$cat103 = NULL
+data.try$cat104 = NULL
+data.try$cat106 = NULL
+data.try$cat107 = NULL
+data.try$cat108 = NULL
+data.try$cat111 = NULL
+data.try$cat113 = NULL
+data.try$cat114 = NULL
+data.try$cat115 = NULL
+data.try$cat116 = NULL
+
+data.try = data.frame(data.try, cat115)
+
+set.seed(5)
+n = dim(data.try)[1]
+train = sample(n,floor(n*0.7))
+data.try.train = data.try[train,]
+data.try.test = data.try[-train,]
+
+lm.try = lm(loss~.,data.try.train)
+summary(lm.try)
+pred.try = predict(lm.try,data.try.test)
+y.try = data.try.test$loss
+MAE.try = mean(abs(exp(y.try) - exp(pred.try)))
+MAE.try
+
+#with cat115: 1266.915
+#with 115 and 87: NA
+#with 115 and 89: NA
+#with 115 and 90: NA
+#with 90: NA
+#with 115 and highly correlated variables: 1266.86
+table(data.try$cat90)
+options(max.print = 1000000)
 ```
 
 
 ## Data
 
 ```{r}
-data.cont = data[,117:131]
-data.small = data[,c(1:70,117:131)]
+data.small = data[,c(1:72,117:131)]
 delete = names(data)[c(1,2,5,6,7,10,11,12,13,14)]
 data.cat = data[,c(72:80,131)]
 loss = data$loss
 ```
 
-```{r}
-corr = cor(data.cont)
-corrplot(corr)
-#Remove one of the variables: 1 or 9,   11 or 12
 
-```
-
-```{r}
-ggplot(data=data, aes(x=cont11,y=cont12))+
-  geom_point()
-
-ggplot(data=data, aes(x=cont11,y=log(loss)))+
-  geom_point()
-```
 
 
 ```{r}
@@ -73,11 +323,7 @@ data.test.cat = data.cat[-train,]
 #MAE = mean(abs(data.test.cat$loss - pred.lm))
 #MAE
 
-
 #pred.submit
-
-
-
 
 ```
 
@@ -86,7 +332,7 @@ data.test.cat = data.cat[-train,]
 
 ```{r}
 set.seed(1000)
-data.small = data[,c(1:70,117:131)]
+data.small = data[,c(1:72,117:131)]
 n = dim(data.small)[1]
 train = sample(n,floor(n*0.75))
 train.small = data.small[train,]
@@ -96,16 +342,11 @@ val = sample(n2,floor(n2*0.8))
 val.small = train.small[-val,]
 train.small = train.small[val,]
 
-
 fit.lm <- lm(loss~.,data=data.small)
 
 pred.lm = predict(fit.lm, test.small)
 MAElinear = mean(abs(test.small$loss - pred.lm))
 MAElinear
-
-
-
-
 ```
 
 ##Lasso
@@ -126,9 +367,6 @@ best.lambda=fit.lasso$lambda.min
 pred.lasso = predict(fit.lasso,Xtest.small,s=fit.lasso$lambda.1se)
 MAELasso = mean(abs(test.small$loss - pred.lasso))
 MAELasso
-
-
-
 ```
 
 
@@ -150,12 +388,10 @@ for (i in 1:m) {
 }
 
 bestLam = lambd[which.min(testErr)]
-
 boostPlot =ggplot(data.frame(x=lambd, y=testErr), aes(x=x, y=y)) +
             xlab("Shrinkage") + 
             ylab("Test MSE") + 
             geom_point()
-
 
 boostPlot
 ```
