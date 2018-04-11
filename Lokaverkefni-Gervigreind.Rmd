@@ -35,7 +35,70 @@ data = read.csv("train.csv")
 #remove ID column
 data$id = NULL
 data.submit = read.csv("test.csv")
+id = data.submit$id
 ```
+
+```{r}
+for(i in 1:116){
+  print(i)
+  k=nlevels(data[,i]) == nlevels(data.submit[,i+1])
+  print(k)
+}
+```
+
+
+Næstu tvo kodabuta þarf ekki að keyra.. veit ekki hvort við þurfum þa.
+
+Variables with different values in data.submit and data.:
+92,96,99,101,102,103,105,106,109,110,113,114,116
+
+```{r,eval=FALSE}
+table(data.submit$cat92); table(data$cat92) #sub
+table(data.submit$cat96); table(data$cat96) #sub
+table(data.submit$cat99); table(data$cat99) #sub
+table(data.submit$cat101); table(data$cat101)
+table(data.submit$cat102); table(data$cat102)
+table(data.submit$cat103); table(data$cat103)
+table(data.submit$cat105); table(data$cat105)
+table(data.submit$cat106); table(data$cat106)
+table(data.submit$cat109); table(data$cat109)
+table(data.submit$cat110); table(data$cat110)
+table(data.submit$cat113); table(data$cat113)
+table(data.submit$cat114); table(data$cat114)
+table(data.submit$cat116); table(data$cat116)
+
+names <- c("cat90","cat92","cat96","cat99","cat101","cat102","cat103",
+           "cat105","cat106","cat109","cat110","cat113","cat114",
+           "cat116")
+
+levels(data.submit[,names[1]])
+sub <- levels(data.submit$cat92)
+nsub <- levels(data$cat92)
+subIn <- unique(c(sub,nsub))
+nsubIn <- unique(c(nsub,sub))
+levels(data.submit$cat92) <- subIn
+levels(data$cat92) <- nsubIn
+data.submit[,"cat92"]
+
+which(table(data.submit$cat92) == 1)
+
+```
+
+```{r,eval=FALSE}
+for(i in 1:14){
+  name <- names[i]
+  sub <- levels(data.submit[,name])
+  nsub <- levels(data[,name])
+  subIn <- unique(c(sub,nsub))
+  nsubIn <- unique(c(nsub,sub))
+  levels(data.submit[,name]) <- subIn
+  levels(data[,name]) <- nsubIn
+}
+```
+
+
+
+
 
 ```{r}
 head(data)[1:5,]
@@ -260,7 +323,8 @@ data.try.test = data.try[-train,]
 lm.try = lm(loss~.,data.try.train)
 summary(lm.try)
 pred.try = predict(lm.try,data.try.test)
-y.try = data.try.test$loss
+#lm.try$xlevels[["cat89"]] <- union(lm.try$xlevels[["cat89"]], levels(data.submit$cat89))
+
 MAE.try = mean(abs(exp(y.try) - exp(pred.try)))
 MAE.try
 
@@ -277,52 +341,32 @@ options(max.print = 1000000)
 
 ## Data
 
-```{r}
-data.small = data[,c(1:72,117:131)]
-delete = names(data)[c(1,2,5,6,7,10,11,12,13,14)]
-data.cat = data[,c(72:80,131)]
-loss = data$loss
-```
-
-
-
-
-```{r}
-set.seed(1000)
-data.cat = data[,c(80:116,131)] #73 74
-n = dim(data)[1]
-train = sample(n,floor(n*0.7))
-data.train.cat = data.cat[train,]
-data.test.cat = data.cat[-train,]
-
-#pred.lm = predict(fit.lm, data.test.cat)
-#MAE = mean(abs(data.test.cat$loss - pred.lm))
-#MAE
-
-#pred.submit
-
-```
-
-
 ##Using Small data set.
 
 ```{r}
 set.seed(1000)
-data.small = data[,c(1:72,117:131)]
-n = dim(data.small)[1]
-train = sample(n,floor(n*0.75))
-train.small = data.small[train,]
-test.small = data.small[-train,]
+data.small = data.try
+train.small = data.try.train
+test.small = data.try.test
 n2 = dim(train.small)[1]
 val = sample(n2,floor(n2*0.8))
 val.small = train.small[-val,]
 train.small = train.small[val,]
 
+
+```
+
+
+##Linear
+
+```{r}
 fit.lm <- lm(loss~.,data=data.small)
 
 pred.lm = predict(fit.lm, test.small)
-MAElinear = mean(abs(test.small$loss - pred.lm))
+MAElinear = mean(abs(exp(test.small$loss) - exp(pred.lm)))
 MAElinear
+
+
 ```
 
 ##Lasso
@@ -340,9 +384,12 @@ best.model = glmnet(Xtrain.small, ytrain.small, alpha = 1)
 predict(best.model, s = fit.lasso$lambda.1se, type = "coefficients")
 
 best.lambda=fit.lasso$lambda.min
-pred.lasso = predict(fit.lasso,Xtest.small,s=fit.lasso$lambda.1se)
-MAELasso = mean(abs(test.small$loss - pred.lasso))
+pred.lasso = predict(fit.lasso,Xtest.small,s=best.lambda)
+MAELasso = mean(abs(exp(test.small$loss) - exp(pred.lasso)))
 MAELasso
+
+
+
 ```
 
 
@@ -351,23 +398,29 @@ MAELasso
 ```{r}
 set.seed(1000)
 lambd <-  seq(0.05, 0.5, by=0.05)
+ntree <- seq(200,1200,by=200)
 m <- length(lambd)
-testErr <- rep(NA, m)
+l <- length(ntree)
+testErr <- array(dim=c(m,l))
 for (i in 1:m) {
-    boostCol = gbm(loss ~ ., data = train.small,
+  for(k in 1:l){
+    boostCol = gbm(loss ~ ., data = data.try.train,
                     distribution = "gaussian",
-                    n.trees = 200, 
+                    n.trees = ntree[k], 
                     shrinkage = lambd[i])
-    testPred = predict(boostCol, val.small, n.trees = 200)
-    testErr[i] = mean(abs(val.small$loss - testPred))
+    testPred = predict(boostCol, val.small, n.trees = ntree[k])
+    testErr[i,k] = mean(abs(exp(val.small$loss) - exp(testPred)))
     print(i)
+  }
 }
 
 bestLam = lambd[which.min(testErr)]
+
 boostPlot =ggplot(data.frame(x=lambd, y=testErr), aes(x=x, y=y)) +
             xlab("Shrinkage") + 
             ylab("Test MSE") + 
             geom_point()
+
 
 boostPlot
 ```
@@ -376,21 +429,23 @@ boostPlot
 set.seed(1000)
 boost.fit <- gbm(loss ~ ., data = train.small,
                  distribution = "gaussian",
-                 n.trees = 1000, shrinkage =0.5 )
+                 n.trees = 1000, shrinkage =bestLam )
 boost.pred <- predict(boost.fit,
                       test.small,
                       n.trees = 1000)
-MAEBoost = mean(abs(test.small$loss - boost.pred))
-MAEBoost
+boost.pred2 <- predict(boost.fit,
+                      data.submit,
+                      n.trees = 1000)
+MAEBoost = mean(abs(exp(test.small$loss) - exp(boost.pred)))
+MAEBoost 
 ```
-
 
 
 ##SUBMIT
 
 ```{r}
 pred.submit = predict(fit.lm,data.submit.cat)
-Submit= data.frame(id,loss=boost.pred)
+Submit= data.frame(id,loss=exp(boost.pred2))
 write.csv(Submit,file="Submit.csv",row.names=FALSE)
 ```
 
