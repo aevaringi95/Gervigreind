@@ -10,7 +10,6 @@ knitr::opts_chunk$set(echo = TRUE)
 rm(list = ls())
 ```
 
-
 ```{r, warning = F, message = F}
 library(plyr); library(dplyr); library(lubridate)
 library(ggplot2)
@@ -98,8 +97,6 @@ for(i in 1:14){
 
 
 
-
-
 ```{r}
 head(data)[1:5,]
 ```
@@ -116,10 +113,10 @@ Check distribution of response
 
 ```{r}
 density1 <- ggplot(data,aes(loss))+
-  geom_density()
+  geom_density(fill = "palegreen2", alpha = 0.4) 
 
 density2 <- ggplot(data,aes(log(loss)))+
-  geom_density()
+  geom_density(fill = "skyblue", alpha = 0.4)
 
 grid.arrange(density1,density2,nrow=2)
 ```
@@ -127,7 +124,6 @@ grid.arrange(density1,density2,nrow=2)
 ```{r}
 skewness(data$loss)
 skewness(log(data$loss))
-skewness(log(1+data$loss))
 
 which(data$loss<1)
 #þar er bara eit loss gildi milli 0 og 1. 
@@ -139,14 +135,18 @@ data$loss = log(data$loss)
 Continuous variables
 ```{r}
 p1 = ggplot(data=data, aes(x=cont2,y=loss))+
-      geom_point()
+      geom_point(size=0.4)+ylab("log(loss)")
 
 p2 = ggplot(data=data, aes(x=cont3,y=loss))+
-      geom_point()
+      geom_point(size=0.4)+ylab("log(loss)")
 
 p3 = ggplot(data=data, aes(x=cont13,y=loss))+
-      geom_point()
-grid.arrange(p1,p2,p3,nrow = 1)
+      geom_point(size=0.4)+ylab("log(loss)")
+
+p4 = ggplot(data=data, aes(x=cont14,y=loss))+
+      geom_point(size=0.4)+ylab("log(loss)")
+
+grid.arrange(p1,p2,p3,p4,nrow = 2)
 ```
 
 Boxplots of categorical variables
@@ -228,9 +228,11 @@ ggplot(data=data, aes(cat1))+
 ```{r}
 data.cont = data[,117:131]
 cormat = cor(data.cont[,-15])
-corrplot(cormat)
+corrplot(cormat, method = "circle")
 highCor = findCorrelation(cormat, cutoff = 0.9)
 highCor
+?corrplot
+
 #Remove one of the variables: 1 or 9,   11 or 12, 6 og 10?
 #hvað með að nota pca á continuous? 
 ```
@@ -284,7 +286,7 @@ data.try$cat115 = droplevels(data.try$cat115); data.try$cat116 = droplevels(data
 #drop highly correlated variables
 data.try$cont9 = NULL
 data.try$cont12 = NULL
-data.try$cat92 = NULL
+
 
 #taka út alla sem gefa NA gildi
 cat74 = data.try$cat74; data.try$cat74 = NULL
@@ -324,16 +326,17 @@ lm.try = lm(loss~.,data.try.train)
 summary(lm.try)
 pred.try = predict(lm.try,data.try.test)
 #lm.try$xlevels[["cat89"]] <- union(lm.try$xlevels[["cat89"]], levels(data.submit$cat89))
-
+y.try = data.try.test$loss
 MAE.try = mean(abs(exp(y.try) - exp(pred.try)))
 MAE.try
 
-#with cat115: 1266.915
+#with cat115 (wo highly correlated variables): 1266.915
 #with 115 and 87: NA
 #with 115 and 89: NA
 #with 115 and 90: NA
 #with 90: NA
 #with 115 and highly correlated variables: 1266.86
+#106: NA. 101: NA. 102: NA. 103: NA
 table(data.try$cat90)
 options(max.print = 1000000)
 ```
@@ -352,8 +355,6 @@ n2 = dim(train.small)[1]
 val = sample(n2,floor(n2*0.8))
 val.small = train.small[-val,]
 train.small = train.small[val,]
-
-
 ```
 
 
@@ -365,8 +366,6 @@ fit.lm <- lm(loss~.,data=data.small)
 pred.lm = predict(fit.lm, test.small)
 MAElinear = mean(abs(exp(test.small$loss) - exp(pred.lm)))
 MAElinear
-
-
 ```
 
 ##Lasso
@@ -395,6 +394,18 @@ MAELasso
 
 ##Boosting.
 
+data með öllum breytum nema continuous 9 og 12, búið að taka út obs < 10 level. 
+1227.14891 á kaggle
+1228.434 í R
+1225.518 minimum í cross validation
+
+```{r}
+n3 = dim(data.try.train)[1]
+val = sample(n3,floor(0.2*n3)) 
+data.try.val = data.try.train[val,]
+data.try.train = data.try.train[-val,]
+```
+
 ```{r}
 set.seed(1000)
 lambd <-  seq(0.05, 0.5, by=0.05)
@@ -408,12 +419,19 @@ for (i in 1:m) {
                     distribution = "gaussian",
                     n.trees = ntree[k], 
                     shrinkage = lambd[i])
-    testPred = predict(boostCol, val.small, n.trees = ntree[k])
-    testErr[i,k] = mean(abs(exp(val.small$loss) - exp(testPred)))
+    testPred = predict(boostCol, data.try.val, n.trees = ntree[k])
+    testErr[i,k] = mean(abs(exp(data.try.val$loss) - exp(testPred)))
     print(i)
   }
 }
 
+which(testErr == min(testErr),arr.ind = T)
+
+bestlam = lambd[9]
+bestntree = ntree[3]
+testErr
+lambd
+ntree
 bestLam = lambd[which.min(testErr)]
 
 boostPlot =ggplot(data.frame(x=lambd, y=testErr), aes(x=x, y=y)) +
@@ -427,16 +445,16 @@ boostPlot
 
 ```{r,eval = T}
 set.seed(1000)
-boost.fit <- gbm(loss ~ ., data = train.small,
+boost.fit <- gbm(loss ~ ., data = data.try.train,
                  distribution = "gaussian",
-                 n.trees = 1000, shrinkage =bestLam )
+                 n.trees = bestntree, shrinkage =bestlam )
 boost.pred <- predict(boost.fit,
-                      test.small,
-                      n.trees = 1000)
+                      data.try.test,
+                      n.trees = bestntree)
 boost.pred2 <- predict(boost.fit,
                       data.submit,
-                      n.trees = 1000)
-MAEBoost = mean(abs(exp(test.small$loss) - exp(boost.pred)))
+                      n.trees = bestntree)
+MAEBoost = mean(abs(exp(data.try.test$loss) - exp(boost.pred)))
 MAEBoost 
 ```
 
