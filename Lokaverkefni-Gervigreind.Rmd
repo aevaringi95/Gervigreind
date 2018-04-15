@@ -398,6 +398,8 @@ data með öllum breytum nema continuous 9 og 12, búið að taka út obs < 10 l
 1227.14891 á kaggle
 1228.434 í R
 1225.518 minimum í cross validation
+lambda = 0.45
+ntree = 600
 
 ```{r}
 n3 = dim(data.try.train)[1]
