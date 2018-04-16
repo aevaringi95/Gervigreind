@@ -213,8 +213,9 @@ lm.try = lm(loss~.,data.try.train)
 pred.try = predict(lm.try,data.try.test)
 pred.sub = predict(lm.try,data.submit) #virkar ekki
 MAE.try = mean(abs(exp(data.try.test$loss) - exp(pred.try)))
-MAE.try
+MAE.try 
 
+#1230.875 Með þvi að hafa allar breyturnar með.
 #with cat115 (w/o highly correlated variables): 1266.915
 #with 115 and 87: NA
 #with 115 and 89: NA
@@ -233,20 +234,6 @@ set.seed(1000)
 data.small = data.try
 train.small = data.try.train
 test.small = data.try.test
-n2 = dim(train.small)[1]
-val = sample(n2,floor(n2*0.8))
-val.small = train.small[-val,]
-train.small = train.small[val,]
-```
-
-##Linear
-
-```{r}
-fit.lm <- lm(loss~.,data=data.small)
-
-pred.lm = predict(fit.lm, test.small)
-MAElinear = mean(abs(exp(test.small$loss) - exp(pred.lm)))
-MAElinear
 ```
 
 ##Lasso
@@ -260,20 +247,24 @@ grid = 10^seq(4, -20, length=1000)
 fit.lasso = cv.glmnet(Xtrain.small,ytrain.small,alpha=1, lambda=grid, thresh=1e-12)
 plot(fit.lasso)
 
-best.model = glmnet(Xtrain.small, ytrain.small, alpha = 1)
-predict(best.model, s = fit.lasso$lambda.1se, type = "coefficients")
 
 best.lambda=fit.lasso$lambda.min
 pred.lasso = predict(fit.lasso,Xtest.small,s=best.lambda)
 MAELasso = mean(abs(exp(test.small$loss) - exp(pred.lasso)))
 MAELasso
 
-coefs_temp <- predict(best.model, s = fit.lasso$lambda.1se, type = "coefficients")
+#S
+coefs_temp <- predict(fit.lasso, s = fit.lasso$lambda.1se, type = "coefficients")
 coefs_temp2 <- data.frame(name = coefs_temp@Dimnames[[1]][coefs_temp@i + 1], coefficient = coefs_temp@x)
 names <- levels(coefs_temp2[,1])
-names <- names[2:83]
+names <- names[2:length(names)]
 names
-data.small.lasso = data.small[,names]
+data.lasso = data.small[,names]
+data.lasso.train = data.lasso[train,]
+data.lasso.test = data.lasso[-train,]
+
+
+
 ```
 
 ##Boosting.
@@ -352,30 +343,32 @@ með lambda 0.45 og n.trees 600
 með lambda 0.1 og n.trees 600 (Tuning)
 1225
 með lambda 0.1 og n.trees 5000.
+1226
+með lambda 0.1 og n.trees (600)
 
 
 ```{r}
-n3 = dim(data.small.lasso.train)[1]
+n3 = dim(data.lasso.train)[1]
 val = sample(n3,floor(0.2*n3)) 
-data.small.lasso.val = data.small.lasso.train[val,]
-data.small.lasso.train = data.small.lasso.train[-val,]
+data.lasso.val = data.lasso.train[val,]
+data.lasso.train = data.lasso.train[-val,]
 ```
 
 ```{r}
 set.seed(1000)
-lambd <-  seq(0.05, 0.5, by=0.05)
-ntree <- seq(200,2200,by=400)
+lambd <-  seq(0.01, 0.2, by=0.01)
+ntree <- seq(1000,5000,by=500)
 m <- length(lambd)
 l <- length(ntree)
 testErr2 <- array(dim=c(m,l))
 for (i in 1:m) {
   for(k in 1:l){
-    boostCol = gbm(loss ~ ., data = data.small.lasso.train,
+    boostCol = gbm(loss ~ ., data = data.lasso.train,
                     distribution = "gaussian",
                     n.trees = ntree[k], 
                     shrinkage = lambd[i])
-    testPred = predict(boostCol, data.small.lasso.val, n.trees = ntree[k])
-    testErr2[i,k] = mean(abs(exp(data.small.lasso.val$loss) - exp(testPred)))
+    testPred = predict(boostCol, data.lasso.val, n.trees = ntree[k])
+    testErr2[i,k] = mean(abs(exp(data.lasso.val$loss) - exp(testPred)))
     print(i)
   }
 }
@@ -388,13 +381,13 @@ Cross validation gaf lambda= 0.1 og ntree = 600.
 
 ```{r}
 set.seed(1000)
-boost.fit.small <- gbm(loss ~ ., data = data.small.lasso.train,
+boost.fit.small <- gbm(loss ~ ., data = data.lasso.train,
                  distribution = "gaussian",
-                 n.trees = 5000, shrinkage =best.lambd )
+                 n.trees = 600, shrinkage =best.lambd )
 boost.pred.small <- predict(boost.fit.small,
                       data.submit,
-                      n.trees = 5000)
-MAEBoost.small = mean(abs(exp(data.small.lasso.test$loss) - exp(boost.pred.small)))
+                      n.trees = 600)
+MAEBoost.small = mean(abs(exp(data.lasso.test$loss) - exp(boost.pred.small)))
 MAEBoost.small 
 ```
 
@@ -405,11 +398,11 @@ MAEBoost.small
 ```{r}
 library(xgboost)
 
-train_y = data.small.lasso.train$loss
-train_x = data.small.lasso.train[,names(data.small.lasso.train)!='loss']
+train_y = data.lasso.train$loss
+train_x = data.lasso.train[,names(data.lasso.train)!='loss']
 
-test_y = data.small.lasso.test$loss
-test_x = data.small.lasso.test[,names(data.small.lasso.test)!='loss']
+test_y = data.lasso.test$loss
+test_x = data.lasso.test[,names(data.lasso.test)!='loss']
 
 
 
@@ -434,7 +427,7 @@ bst = xgb.train(data = dtrain,
 
 
 y_hat = predict(bst,data.matrix(data.submit))
-MAEBoost.small2 = mean(abs(exp(data.small.lasso.val$loss) - exp(y_hat)))
+MAEBoost.small2 = mean(abs(exp(data.lasso.val$loss) - exp(y_hat)))
 MAEBoost.small2 
 
 ```
