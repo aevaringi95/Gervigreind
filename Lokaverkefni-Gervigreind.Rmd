@@ -252,10 +252,11 @@ coefs_temp <- predict(fit.lasso, s = fit.lasso$lambda.1se, type = "coefficients"
 coefs_temp2 <- data.frame(name = coefs_temp@Dimnames[[1]][coefs_temp@i + 1], coefficient = coefs_temp@x)
 names <- levels(coefs_temp2[,1])
 names <- names[2:length(names)]
+names <- c(names,"loss")
 names
 data.lasso = data.try[,names]
 data.lasso.train = data.lasso[train,]
-data.lasso.test = data.lasso[-train,]
+data.lasso.test = data.lasso[-val,]
 
 
 
@@ -340,6 +341,9 @@ með lambda 0.1 og n.trees 5000.
 1226
 með lambda 0.1 og n.trees (600)
 
+1225.51977
+með lambda 0.09 og ntree 1000.
+
 
 ```{r}
 n3 = dim(data.lasso.train)[1]
@@ -350,14 +354,14 @@ data.lasso.train = data.lasso.train[-val,]
 
 ```{r}
 set.seed(1000)
-lambd <-  seq(0.01, 0.2, by=0.01)
-ntree <- seq(1000,5000,by=500)
+lambd <-  seq(0.01, 0.1, by=0.01)
+ntree <- seq(1000,5000,by=1000)
 m <- length(lambd)
 l <- length(ntree)
 testErr2 <- array(dim=c(m,l))
 for (i in 1:m) {
   for(k in 1:l){
-    boostCol = gbm(loss ~ ., data = data.lasso.train,
+    boostCol = gbm(loss ~., data = data.lasso.train,
                     distribution = "gaussian",
                     n.trees = ntree[k], 
                     shrinkage = lambd[i])
@@ -377,10 +381,10 @@ Cross validation gaf lambda= 0.1 og ntree = 600.
 set.seed(1000)
 boost.fit.small <- gbm(loss ~ ., data = data.lasso.train,
                  distribution = "gaussian",
-                 n.trees = 600, shrinkage =best.lambd )
+                 n.trees = 1000, shrinkage =0.09 )
 boost.pred.small <- predict(boost.fit.small,
                       data.submit,
-                      n.trees = 600)
+                      n.trees = 1000)
 MAEBoost.small = mean(abs(exp(data.lasso.test$loss) - exp(boost.pred.small)))
 MAEBoost.small 
 ```
@@ -426,6 +430,29 @@ MAEBoost.small2
 
 ```
 
+###Robust regression
+EKKI FARIÐ AÐ VIRKA ..
+
+```{r}
+library(MASS)
+data.lasso.train$cat100  = droplevels(data.lasso.train$cat100) ; data.lasso.train$cat101  = droplevels(data.lasso.train$cat101)
+data.lasso.train$cat102  = droplevels(data.lasso.train$cat102) ; data.lasso.train$cat103  = droplevels(data.lasso.train$cat103)
+data.lasso.train$cat105  = droplevels(data.lasso.train$cat105) ; data.lasso.train$cat111  = droplevels(data.lasso.train$cat111)
+data.lasso.train$cat112 = droplevels(data.lasso.train$cat112); data.lasso.train$cat114 = droplevels(data.lasso.train$cat114)
+data.lasso.train$cat99 = droplevels(data.lasso.train$cat99); data.lasso.train$cat98 = droplevels(data.lasso.train$cat98)
+data.lasso.train$cat97 = droplevels(data.lasso.train$cat97)
+data.lasso.train$cat92 = droplevels(data.lasso.train$cat92)
+data.lasso.train$cat93 = droplevels(data.lasso.train$cat93)
+data.lasso.train = droplevels(data.lasso.train)
+rlm.try = rlm(loss~.,data=data.lasso.train)
+pred.try = predict(rlm.try,data.test)
+pred.sub = predict(rlm.try,data.submit) #virkar ekki
+MAE.try = mean(abs(exp(data.test$loss) - exp(pred.try)))
+MAE.try 
+
+
+```
+
 
 
 
@@ -433,7 +460,7 @@ MAEBoost.small2
 
 ```{r}
 pred.submit = predict(fit.lm,data.submit.cat)
-Submit= data.frame(id,loss=exp(boost.pred2))
+Submit= data.frame(id,loss=exp(boost.pred.small))
 write.csv(Submit,file="Submit.csv",row.names=FALSE)
 ```
 
