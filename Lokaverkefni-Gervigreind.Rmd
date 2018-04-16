@@ -399,6 +399,49 @@ MAEBoost.small
 ```
 
 
+
+###Prufa XG boost.. hefur ekkert tekist ennþa
+
+```{r}
+library(xgboost)
+
+train_y = data.small.lasso.train$loss
+train_x = data.small.lasso.train[,names(data.small.lasso.train)!='loss']
+
+test_y = data.small.lasso.test$loss
+test_x = data.small.lasso.test[,names(data.small.lasso.test)!='loss']
+
+
+
+dtrain = xgb.DMatrix(data = data.matrix(train_x), label = train_y)
+dtest = xgb.DMatrix(data =  data.matrix(test_x), label = test_y)
+
+# these are the datasets the rmse is evaluated for at each iteration
+watchlist = list(train=dtrain, test=dtest)
+
+# try 1 - off a set of paramaters I know work pretty well for most stuff
+
+bst = xgb.train(data = dtrain, 
+                max.depth = 6, 
+                eta = 0.01, 
+                nthread = 2, 
+                nround = 10000, 
+                eval_metric = "mae",
+                watchlist = watchlist, 
+                objective = "reg:linear", 
+                early_stopping_rounds = 50,
+                print_every_n = 500)
+
+
+y_hat = predict(bst,data.matrix(data.submit))
+MAEBoost.small2 = mean(abs(exp(data.small.lasso.val$loss) - exp(y_hat)))
+MAEBoost.small2 
+
+```
+
+
+
+
 ##SUBMIT
 
 ```{r}
