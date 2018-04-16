@@ -206,13 +206,13 @@ cat116 = data.try$cat116; data.try$cat116 = NULL
 set.seed(5)
 n = dim(data.try)[1]
 train = sample(n,floor(n*0.7))
-data.try.train = data.try[train,]
-data.try.test = data.try[-train,]
+data.train = data.try[train,]
+data.test = data.try[-train,]
 
-lm.try = lm(loss~.,data.try.train)
-pred.try = predict(lm.try,data.try.test)
+lm.try = lm(loss~.,data.train)
+pred.try = predict(lm.try,data.test)
 pred.sub = predict(lm.try,data.submit) #virkar ekki
-MAE.try = mean(abs(exp(data.try.test$loss) - exp(pred.try)))
+MAE.try = mean(abs(exp(data.test$loss) - exp(pred.try)))
 MAE.try 
 
 #1230.875 Með þvi að hafa allar breyturnar með.
@@ -225,41 +225,35 @@ MAE.try
 #106: NA. 101: NA. 102: NA. 103: NA
 ```
 
-## Data
+## Regression algorithms.
 
-##Using Small data set.
-
-```{r}
-set.seed(1000)
-data.small = data.try
-train.small = data.try.train
-test.small = data.try.test
-```
 
 ##Lasso
 
 ```{r}
 set.seed(1000)
-ytrain.small = data.matrix(train.small[,"loss"])
-Xtrain.small = data.matrix(train.small[,!(colnames(train.small) %in% c("loss"))])
-Xtest.small = data.matrix(test.small[,!(colnames(train.small) %in% c("loss"))])
+ydata.train = data.matrix(data.train[,"loss"])
+Xdata.train = data.matrix(data.train[,!(colnames(data.train) %in% c("loss"))])
+Xdata.test = data.matrix(data.test[,!(colnames(data.train) %in% c("loss"))])
 grid = 10^seq(4, -20, length=1000)
-fit.lasso = cv.glmnet(Xtrain.small,ytrain.small,alpha=1, lambda=grid, thresh=1e-12)
+fit.lasso = cv.glmnet(Xdata.train,ydata.train,alpha=1, lambda=grid, thresh=1e-12)
 plot(fit.lasso)
 
 
 best.lambda=fit.lasso$lambda.min
-pred.lasso = predict(fit.lasso,Xtest.small,s=best.lambda)
-MAELasso = mean(abs(exp(test.small$loss) - exp(pred.lasso)))
+pred.lasso = predict(fit.lasso,Xdata.test,s=best.lambda)
+MAELasso = mean(abs(exp(data.test$loss) - exp(pred.lasso)))
 MAELasso
+#1275.478
 
-#S
+
+#Bua til model ur coefs sem eru ekki 0.
 coefs_temp <- predict(fit.lasso, s = fit.lasso$lambda.1se, type = "coefficients")
 coefs_temp2 <- data.frame(name = coefs_temp@Dimnames[[1]][coefs_temp@i + 1], coefficient = coefs_temp@x)
 names <- levels(coefs_temp2[,1])
 names <- names[2:length(names)]
 names
-data.lasso = data.small[,names]
+data.lasso = data.try[,names]
 data.lasso.train = data.lasso[train,]
 data.lasso.test = data.lasso[-train,]
 
@@ -277,10 +271,10 @@ lambda = 0.45
 ntree = 600
 
 ```{r}
-n3 = dim(data.try.train)[1]
+n3 = dim(data.train)[1]
 val = sample(n3,floor(0.2*n3)) 
-data.try.val = data.try.train[val,]
-data.try.train = data.try.train[-val,]
+data.val = data.train[val,]
+data.train = data.train[-val,]
 ```
 
 ```{r}
@@ -292,12 +286,12 @@ l <- length(ntree)
 testErr <- array(dim=c(m,l))
 for (i in 1:m) {
   for(k in 1:l){
-    boostCol = gbm(loss ~ ., data = data.try.train,
+    boostCol = gbm(loss ~ ., data = data.train,
                     distribution = "gaussian",
                     n.trees = ntree[k], 
                     shrinkage = lambd[i])
-    testPred = predict(boostCol, data.try.val, n.trees = ntree[k])
-    testErr[i,k] = mean(abs(exp(data.try.val$loss) - exp(testPred)))
+    testPred = predict(boostCol, data.val, n.trees = ntree[k])
+    testErr[i,k] = mean(abs(exp(data.val$loss) - exp(testPred)))
     print(i)
   }
 }
@@ -322,21 +316,21 @@ boostPlot
 
 ```{r,eval = T}
 set.seed(1000)
-boost.fit <- gbm(loss ~ ., data = data.try.train,
+boost.fit <- gbm(loss ~ ., data = data.train,
                  distribution = "gaussian",
                  n.trees = bestntree, shrinkage =bestlam )
 boost.pred <- predict(boost.fit,
-                      data.try.test,
+                      data.test,
                       n.trees = bestntree)
 boost.pred2 <- predict(boost.fit,
                       data.submit,
                       n.trees = bestntree)
-MAEBoost = mean(abs(exp(data.try.test$loss) - exp(boost.pred)))
+MAEBoost = mean(abs(exp(data.test$loss) - exp(boost.pred)))
 MAEBoost 
 ```
 
 
-## Boosting a minna modelið.
+## Boosting a Lasso modelið.
 1225.86
 með lambda 0.45 og n.trees 600
 1223.98559
