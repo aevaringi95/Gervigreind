@@ -249,11 +249,7 @@ cat108 = data.try$cat108; data.try$cat108 = NULL
 cat111 = data.try$cat111; data.try$cat111 = NULL
 cat113 = data.try$cat113; data.try$cat113 = NULL
 cat114 = data.try$cat114; data.try$cat114 = NULL
-cat115 = data.try$cat115; data.try$cat115 = NULL
 cat116 = data.try$cat116; data.try$cat116 = NULL
-
-
-data.try = data.frame(data.try, cat115)
 
 set.seed(5)
 n = dim(data.try)[1]
