@@ -37,11 +37,6 @@ id = data.submit$id
 ```
 
 ```{r}
-length(levels(data$cat116))
-length(which(table(data$cat116)==2))
-```
-
-```{r}
 #Check for NA values
 dim(na.omit(data)) == dim(data)
 ```
