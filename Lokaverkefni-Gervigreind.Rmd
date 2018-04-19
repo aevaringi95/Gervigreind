@@ -207,13 +207,23 @@ train = sample(n,floor(n*0.7))
 data.train = data.try[train,]
 data.test = data.try[-train,]
 
-
 lm.try = lm(loss~.,data.train)
 pred.try = predict(lm.try,data.test)
 MAE.try = mean(abs(exp(data.test$loss) - exp(pred.try)))
 MAE.try 
 
-pred.sub = predict(lm.try,data.submit) #virkar ekki
+pred.sub = predict(lm.try,data.submit) 
+
+fix = c(75,88,89,90,92,96,99,101,103,104,105,106,107,109,110,111,113,114,115,116)
+for(i in 1:length(fix)){
+  string = paste("cat",as.character(fix[i]),sep = "")
+  var = eval(parse(text = paste("data.submit$cat",as.character(fix[i]),sep="")))
+  lm.try$xlevels[[string]] <- union(lm.try$xlevels[[string]], levels(var))
+}
+```
+
+```{r}
+#gamall kóði - ekki keyra
 lm.try$xlevels[["cat75"]] <- union(lm.try$xlevels[["cat75"]], levels(data.submit$cat75))
 lm.try$xlevels[["cat88"]] <- union(lm.try$xlevels[["cat88"]], levels(data.submit$cat88))
 lm.try$xlevels[["cat89"]] <- union(lm.try$xlevels[["cat89"]], levels(data.submit$cat89))
@@ -234,8 +244,9 @@ lm.try$xlevels[["cat113"]] <- union(lm.try$xlevels[["cat113"]], levels(data.subm
 lm.try$xlevels[["cat114"]] <- union(lm.try$xlevels[["cat114"]], levels(data.submit$cat114))
 lm.try$xlevels[["cat115"]] <- union(lm.try$xlevels[["cat115"]], levels(data.submit$cat115))
 lm.try$xlevels[["cat116"]] <- union(lm.try$xlevels[["cat116"]], levels(data.submit$cat116))
-
 ```
+
+
 
 ##Lasso
 
