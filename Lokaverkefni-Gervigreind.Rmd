@@ -107,12 +107,6 @@ grid.arrange(b1,b2,b3,b4,nrow = 2)
 grid.arrange(b5,b6,b7,b8,nrow = 2)
 ```
 
-```{r}
-#Barplots of categorical variables
-ggplot(data=data, aes(cat1))+
-  geom_bar()
-```
-
 ## Correlation
 
 ```{r}
@@ -278,9 +272,6 @@ names
 data.lasso = data.try[,names]
 data.lasso.train = data.lasso[train,]
 data.lasso.test = data.lasso[-train,]
-
-
-
 ```
 
 ##Boosting.
@@ -335,8 +326,6 @@ bestLam = lambd[which.min(testErr)]
 MAEplotNtree = testErr[4,,5]
 MAEplotInt = testErr[4,13,]
 
-
-
 boostPlot =ggplot(data.frame(x=ntree,y=MAEplotNtree), aes(x=x, y=y)) +
             xlab("number of trees") + 
             ylab("Validation MAE") + 
@@ -353,8 +342,6 @@ boostPlot2
 
 grid.arrange(boostPlot,
              boostPlot2,ncol=2)
-
-
 ```
 
 ```{r,eval = T}
@@ -375,8 +362,6 @@ MAEBoost
 
 #1154.547
 #Kaggle: 1156.38
-
-
 ```
 
 
@@ -460,7 +445,6 @@ ggplot(data=plot.lambd.data,aes(x=ntree,y=plot.lambd))+
   geom_line()+
   xlab("Number of trees")+
   ylab("MAE")
-
 ```
 
 ```{r}
