@@ -128,14 +128,17 @@ data$cont12 = NULL
 ```{r}
 data.try = data
 
-#Run through all of the variables to see which one have categories with observations under 10.
+#Remove those categories with observations under 10
 for(i in 1:116){
   var = eval(parse(text = paste("data.try$cat",as.character(i),sep="")))
-  print(i)
-  print(table(var))
+  data.try = data.try[var %in% names(which(table(var) > 10)), ]
 }
 
-#Remove those categories.
+data.try = droplevels(data.try)
+```
+
+```{r}
+#gamall kóði - ekki keyra
 data.try = data.try[data.try$cat75 %in% names(which(table(data.try$cat75) > 10)), ]
 data.try = data.try[data.try$cat88 %in% names(which(table(data.try$cat88) > 10)), ]
 data.try = data.try[data.try$cat89 %in% names(which(table(data.try$cat89) > 10)), ]
@@ -167,9 +170,7 @@ data.try$cat107 = droplevels(data.try$cat107); data.try$cat109 = droplevels(data
 data.try$cat110 = droplevels(data.try$cat110); data.try$cat111 = droplevels(data.try$cat111)
 data.try$cat113 = droplevels(data.try$cat113); data.try$cat114 = droplevels(data.try$cat114)
 data.try$cat115 = droplevels(data.try$cat115); data.try$cat116 = droplevels(data.try$cat116)
-```
 
-```{r}
 #Take variables with NA.
 cat74 = data.try$cat74; data.try$cat74 = NULL
 cat81 = data.try$cat81; data.try$cat81 = NULL
@@ -194,6 +195,7 @@ cat113 = data.try$cat113; data.try$cat113 = NULL
 cat114 = data.try$cat114; data.try$cat114 = NULL
 cat116 = data.try$cat116; data.try$cat116 = NULL
 ```
+``
 
 ## Linear regression
 
