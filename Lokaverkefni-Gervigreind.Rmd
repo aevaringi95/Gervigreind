@@ -123,6 +123,7 @@ data$cont12 = NULL
 data.try = data
 
 #Remove those categories with observations under 10
+#fer bara í gegnum alla, gerist ekkert ef > 10 mælingar
 for(i in 1:116){
   var = eval(parse(text = paste("data.try$cat",as.character(i),sep="")))
   data.try = data.try[var %in% names(which(table(var) > 10)), ]
