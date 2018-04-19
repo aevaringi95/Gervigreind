@@ -170,7 +170,7 @@ data.try$cat115 = droplevels(data.try$cat115); data.try$cat116 = droplevels(data
 ```
 
 ```{r}
-#taka út alla sem gefa NA gildi- þarf ekki að keyra
+#Take variables with NA.
 cat74 = data.try$cat74; data.try$cat74 = NULL
 cat81 = data.try$cat81; data.try$cat81 = NULL
 cat85 = data.try$cat85; data.try$cat85 = NULL
@@ -198,30 +198,42 @@ cat116 = data.try$cat116; data.try$cat116 = NULL
 ## Linear regression
 
 ```{r}
+#Split to train and test.
 set.seed(5)
 n = dim(data.try)[1]
 train = sample(n,floor(n*0.7))
 data.train = data.try[train,]
 data.test = data.try[-train,]
 
+
 lm.try = lm(loss~.,data.train)
 pred.try = predict(lm.try,data.test)
-pred.sub = predict(lm.try,data.submit) #virkar ekki
 MAE.try = mean(abs(exp(data.test$loss) - exp(pred.try)))
 MAE.try 
 
-#1230.875 Með þvi að hafa allar breyturnar með.
-#with cat115 (w/o highly correlated variables): 1266.915
-#with 115 and 87: NA
-#with 115 and 89: NA
-#with 115 and 90: NA
-#with 90: NA
-#with 115 and highly correlated variables: 1266.86
-#106: NA. 101: NA. 102: NA. 103: NA
+pred.sub = predict(lm.try,data.submit) #virkar ekki
+lm.try$xlevels[["cat75"]] <- union(lm.try$xlevels[["cat75"]], levels(data.submit$cat75))
+lm.try$xlevels[["cat88"]] <- union(lm.try$xlevels[["cat88"]], levels(data.submit$cat88))
+lm.try$xlevels[["cat89"]] <- union(lm.try$xlevels[["cat89"]], levels(data.submit$cat89))
+lm.try$xlevels[["cat90"]] <- union(lm.try$xlevels[["cat90"]], levels(data.submit$cat90))
+lm.try$xlevels[["cat92"]] <- union(lm.try$xlevels[["cat92"]], levels(data.submit$cat92))
+lm.try$xlevels[["cat96"]] <- union(lm.try$xlevels[["cat96"]], levels(data.submit$cat96))
+lm.try$xlevels[["cat99"]] <- union(lm.try$xlevels[["cat99"]], levels(data.submit$cat99))
+lm.try$xlevels[["cat101"]] <- union(lm.try$xlevels[["cat101"]], levels(data.submit$cat101))
+lm.try$xlevels[["cat103"]] <- union(lm.try$xlevels[["cat103"]], levels(data.submit$cat103))
+lm.try$xlevels[["cat104"]] <- union(lm.try$xlevels[["cat104"]], levels(data.submit$cat104))
+lm.try$xlevels[["cat105"]] <- union(lm.try$xlevels[["cat105"]], levels(data.submit$cat105))
+lm.try$xlevels[["cat106"]] <- union(lm.try$xlevels[["cat106"]], levels(data.submit$cat106))
+lm.try$xlevels[["cat107"]] <- union(lm.try$xlevels[["cat107"]], levels(data.submit$cat107))
+lm.try$xlevels[["cat109"]] <- union(lm.try$xlevels[["cat109"]], levels(data.submit$cat109))
+lm.try$xlevels[["cat110"]] <- union(lm.try$xlevels[["cat110"]], levels(data.submit$cat110))
+lm.try$xlevels[["cat111"]] <- union(lm.try$xlevels[["cat111"]], levels(data.submit$cat111))
+lm.try$xlevels[["cat113"]] <- union(lm.try$xlevels[["cat113"]], levels(data.submit$cat113))
+lm.try$xlevels[["cat114"]] <- union(lm.try$xlevels[["cat114"]], levels(data.submit$cat114))
+lm.try$xlevels[["cat115"]] <- union(lm.try$xlevels[["cat115"]], levels(data.submit$cat115))
+lm.try$xlevels[["cat116"]] <- union(lm.try$xlevels[["cat116"]], levels(data.submit$cat116))
+
 ```
-
-## Regression algorithms.
-
 
 ##Lasso
 
@@ -231,18 +243,19 @@ ydata.train = data.matrix(data.train[,"loss"])
 Xdata.train = data.matrix(data.train[,!(colnames(data.train) %in% c("loss"))])
 Xdata.test = data.matrix(data.test[,!(colnames(data.train) %in% c("loss"))])
 grid = 10^seq(4, -20, length=1000)
-fit.lasso = cv.glmnet(Xdata.train,ydata.train,alpha=1, lambda=grid, thresh=1e-12)
+fit.lasso = cv.glmnet(Xdata.train,
+                      ydata.train,
+                      alpha=1,
+                      lambda=grid,
+                      thresh=1e-12)
 plot(fit.lasso)
-
 
 best.lambda=fit.lasso$lambda.min
 pred.lasso = predict(fit.lasso,Xdata.test,s=best.lambda)
 MAELasso = mean(abs(exp(data.test$loss) - exp(pred.lasso)))
 MAELasso
-#1275.478
 
-
-#Bua til model ur coefs sem eru ekki 0.
+#Create a data set from non-zero coefs from Lasso
 coefs_temp <- predict(fit.lasso, s = fit.lasso$lambda.1se, type = "coefficients")
 coefs_temp2 <- data.frame(name = coefs_temp@Dimnames[[1]][coefs_temp@i + 1], coefficient = coefs_temp@x)
 names <- levels(coefs_temp2[,1])
@@ -251,7 +264,7 @@ names <- c(names,"loss")
 names
 data.lasso = data.try[,names]
 data.lasso.train = data.lasso[train,]
-data.lasso.test = data.lasso[-val,]
+data.lasso.test = data.lasso[-train,]
 
 
 
@@ -259,14 +272,8 @@ data.lasso.test = data.lasso[-val,]
 
 ##Boosting.
 
-data með öllum breytum nema continuous 9 og 12, búið að taka út obs < 10 level. 
-1227.14891 á kaggle
-1228.434 í R
-1225.518 minimum í cross validation
-lambda = 0.45
-ntree = 600
-
 ```{r}
+#Create a validation set for grid search
 n3 = dim(data.train)[1]
 val = sample(n3,floor(0.2*n3)) 
 data.val = data.train[val,]
@@ -274,47 +281,76 @@ data.train = data.train[-val,]
 ```
 
 ```{r}
+#Grid Search.
 set.seed(1000)
-lambd <-  seq(0.05, 0.5, by=0.05)
-ntree <- seq(200,1200,by=200)
+lambd <-  seq(0.001, 0.01, by=0.003)
+lambd <- c(lambd,seq(0.04,0.2,by=0.08))
+ntree <- seq(200,800,by=200)
+ntree <- c(ntree,seq(1000,3000,by=250))
+depth <- c(1,2,4,6,8)
 m <- length(lambd)
 l <- length(ntree)
-testErr <- array(dim=c(m,l))
-for (i in 1:m) {
-  for(k in 1:l){
-    boostCol = gbm(loss ~ ., data = data.train,
-                    distribution = "gaussian",
-                    n.trees = ntree[k], 
-                    shrinkage = lambd[i])
-    testPred = predict(boostCol, data.val, n.trees = ntree[k])
-    testErr[i,k] = mean(abs(exp(data.val$loss) - exp(testPred)))
-    print(i)
+t <- length(depth)
+testErr <- array(dim=c(m,l,t))
+for (i in 1:m){
+  for(d in 1:t){
+      boostCol = gbm(loss ~., data = data.train,
+                      distribution = "gaussian",
+                      n.trees = 3000,
+                      shrinkage = lambd[i],
+                      interaction.depth = depth[d])
+      for(k in 1:l){
+      testPred = predict(boostCol,
+                         data.val,
+                         n.trees = ntree[k])
+      testErr[i,k,d] = mean(abs(exp(data.val$loss) - exp(testPred)))
+      }
+  print(i)
   }
 }
 
 which(testErr == min(testErr),arr.ind = T)
-
-bestlam = lambd[9]
-bestntree = ntree[3]
+### lam = 0.1,d=8,ntree=3000
+bestlam = lambd[4]
+bestntree = ntree[13]
+bestdepth = depth[5]
 testErr
 lambd
 ntree
 bestLam = lambd[which.min(testErr)]
 
-boostPlot =ggplot(data.frame(x=lambd, y=testErr), aes(x=x, y=y)) +
-            xlab("Shrinkage") + 
-            ylab("Test MSE") + 
-            geom_point()
+MAEplotNtree = testErr[4,,5]
+MAEplotInt = testErr[4,13,]
 
 
+
+boostPlot =ggplot(data.frame(x=ntree,y=MAEplotNtree), aes(x=x, y=y)) +
+            xlab("number of trees") + 
+            ylab("Validation MAE") + 
+            geom_point()+
+            geom_line()
 boostPlot
+
+boostPlot2 =ggplot(data.frame(x=depth,y=MAEplotInt), aes(x=x, y=y)) +
+            xlab("Interaction Depth") + 
+            ylab("Validation MAE") + 
+            geom_point()+
+            geom_line()
+boostPlot2
+
+grid.arrange(boostPlot,
+             boostPlot2,ncol=2)
+
+
 ```
 
 ```{r,eval = T}
 set.seed(1000)
 boost.fit <- gbm(loss ~ ., data = data.train,
                  distribution = "gaussian",
-                 n.trees = bestntree, shrinkage =bestlam )
+                 n.trees = bestntree,
+                 shrinkage =bestlam,
+                 interaction.depth = bestdepth)
 boost.pred <- predict(boost.fit,
                       data.test,
                       n.trees = bestntree)
@@ -323,21 +359,45 @@ boost.pred2 <- predict(boost.fit,
                       n.trees = bestntree)
 MAEBoost = mean(abs(exp(data.test$loss) - exp(boost.pred)))
 MAEBoost 
+
+#1154.547
+#Kaggle: 1156.38
+
+
 ```
+
+
+##Linear a Lasso modelið
+
+```{r}
+lm.try.lasso = lm(loss~.,data.lasso.train)
+pred.try.lasso = predict(lm.try.lasso,data.lasso.test)
+MAE.try = mean(abs(exp(data.lasso.test$loss) - exp(pred.try.lasso)))
+MAE.try 
+#1236.39 .
+
+pred.sub = predict(lm.try.lasso,data.submit) #virkar ekki
+lm.try.lasso$xlevels[["cat101"]] <- union(lm.try.lasso$xlevels[["cat101"]], levels(data.submit$cat101))
+lm.try.lasso$xlevels[["cat103"]] <- union(lm.try.lasso$xlevels[["cat103"]], levels(data.submit$cat103))
+lm.try.lasso$xlevels[["cat105"]] <- union(lm.try.lasso$xlevels[["cat105"]], levels(data.submit$cat105))
+lm.try.lasso$xlevels[["cat111"]] <- union(lm.try.lasso$xlevels[["cat111"]], levels(data.submit$cat111))
+lm.try.lasso$xlevels[["cat114"]] <- union(lm.try.lasso$xlevels[["cat114"]], levels(data.submit$cat114))
+lm.try.lasso$xlevels[["cat75"]] <- union(lm.try.lasso$xlevels[["cat75"]], levels(data.submit$cat75))
+lm.try.lasso$xlevels[["cat88"]] <- union(lm.try.lasso$xlevels[["cat88"]], levels(data.submit$cat88))
+lm.try.lasso$xlevels[["cat92"]] <- union(lm.try.lasso$xlevels[["cat92"]], levels(data.submit$cat92))
+lm.try.lasso$xlevels[["cat99"]] <- union(lm.try.lasso$xlevels[["cat99"]], levels(data.submit$cat99))
+
+#Kaggle gefur: 1932.29996
+```
+
 
 
 ## Boosting a Lasso modelið.
 1225.86
 með lambda 0.45 og n.trees 600
-1223.98559
-með lambda 0.1 og n.trees 600 (Tuning)
-1225
-með lambda 0.1 og n.trees 5000.
-1226
-með lambda 0.1 og n.trees (600)
 
-1225.51977
-með lambda 0.09 og ntree 1000.
+með lamda 0.05 og ntree 2500
+1224.54568
 
 
 ```{r}
@@ -349,104 +409,59 @@ data.lasso.train = data.lasso.train[-val,]
 
 ```{r}
 set.seed(1000)
-lambd <-  seq(0.01, 0.1, by=0.01)
-ntree <- seq(1000,5000,by=1000)
+lambd <-  seq(0.001, 0.01, by=0.002)
+lambd <- c(lambd,seq(0.01,0.13,by=0.04))
+ntree <- seq(200,800,by=200)
+ntree <- c(ntree,seq(1000,2000,by=250))
+depth <- c(1,2,4,6,8)
 m <- length(lambd)
 l <- length(ntree)
-testErr2 <- array(dim=c(m,l))
-for (i in 1:m) {
-  for(k in 1:l){
-    boostCol = gbm(loss ~., data = data.lasso.train,
-                    distribution = "gaussian",
-                    n.trees = ntree[k], 
-                    shrinkage = lambd[i])
-    testPred = predict(boostCol, data.lasso.val, n.trees = ntree[k])
-    testErr2[i,k] = mean(abs(exp(data.lasso.val$loss) - exp(testPred)))
-    print(i)
+t <- length(depth)
+testErr2 <- array(dim=c(m,l,t))
+for (i in 1:m){
+  for(d in 1:t){
+      boostCol = gbm(loss ~., data = data.lasso.train,
+                      distribution = "gaussian",
+                      n.trees = 2000,
+                      shrinkage = lambd[i],
+                      interaction.depth = depth[d])
+      for(k in 1:l){
+      testPred = predict(boostCol,
+                         data.lasso.val,
+                         n.trees = ntree[k])
+      testErr2[i,k,d] = mean(abs(exp(data.lasso.val$loss) - exp(testPred)))
+      print(i)
+      }
   }
 }
 testErr2
-best.lambd = lambd[2]
-best.ntree = ntree[2]
-```
-Cross validation gaf lambda= 0.1 og ntree = 600.
+#Lambda = 0.05 og ntree = 2500
+best.lambd = lambd[7]
+best.ntree = ntree[9]
 
+#teikna upp besta lambda með MAE sem fall af ntrees.
+plot.lambd = testErr2[7,]
+plot.lambd.data = data.frame(plot.lambd,ntree)
+ggplot(data=plot.lambd.data,aes(x=ntree,y=plot.lambd))+
+  geom_point()+
+  geom_line()+
+  xlab("Number of trees")+
+  ylab("MAE")
+
+```
 
 ```{r}
 set.seed(1000)
-boost.fit.small <- gbm(loss ~ ., data = data.lasso.train,
+boost.fit.small <- gbm(loss ~ ., data = data.lasso,
                  distribution = "gaussian",
-                 n.trees = 1000, shrinkage =0.09 )
+                 n.trees = best.ntree, shrinkage =best.lambd)
 boost.pred.small <- predict(boost.fit.small,
                       data.submit,
-                      n.trees = 1000)
+                      n.trees = best.ntree)
 MAEBoost.small = mean(abs(exp(data.lasso.test$loss) - exp(boost.pred.small)))
 MAEBoost.small 
 ```
 
-
-
-###Prufa XG boost.. hefur ekkert tekist ennþa
-
-```{r}
-library(xgboost)
-
-train_y = data.lasso.train$loss
-train_x = data.lasso.train[,names(data.lasso.train)!='loss']
-
-test_y = data.lasso.test$loss
-test_x = data.lasso.test[,names(data.lasso.test)!='loss']
-
-
-
-dtrain = xgb.DMatrix(data = data.matrix(train_x), label = train_y)
-dtest = xgb.DMatrix(data =  data.matrix(test_x), label = test_y)
-
-# these are the datasets the rmse is evaluated for at each iteration
-watchlist = list(train=dtrain, test=dtest)
-
-# try 1 - off a set of paramaters I know work pretty well for most stuff
-
-bst = xgb.train(data = dtrain, 
-                max.depth = 6, 
-                eta = 0.01, 
-                nthread = 2, 
-                nround = 10000, 
-                eval_metric = "mae",
-                watchlist = watchlist, 
-                objective = "reg:linear", 
-                early_stopping_rounds = 50,
-                print_every_n = 500)
-
-
-y_hat = predict(bst,data.matrix(data.submit))
-MAEBoost.small2 = mean(abs(exp(data.lasso.val$loss) - exp(y_hat)))
-MAEBoost.small2 
-
-```
-
-###Robust regression
-EKKI FARIÐ AÐ VIRKA ..
-
-```{r}
-library(MASS)
-data.lasso.train$cat100  = droplevels(data.lasso.train$cat100) ; data.lasso.train$cat101  = droplevels(data.lasso.train$cat101)
-data.lasso.train$cat102  = droplevels(data.lasso.train$cat102) ; data.lasso.train$cat103  = droplevels(data.lasso.train$cat103)
-data.lasso.train$cat105  = droplevels(data.lasso.train$cat105) ; data.lasso.train$cat111  = droplevels(data.lasso.train$cat111)
-data.lasso.train$cat112 = droplevels(data.lasso.train$cat112); data.lasso.train$cat114 = droplevels(data.lasso.train$cat114)
-data.lasso.train$cat99 = droplevels(data.lasso.train$cat99); data.lasso.train$cat98 = droplevels(data.lasso.train$cat98)
-data.lasso.train$cat97 = droplevels(data.lasso.train$cat97)
-data.lasso.train$cat92 = droplevels(data.lasso.train$cat92)
-data.lasso.train$cat93 = droplevels(data.lasso.train$cat93)
-data.lasso.train = droplevels(data.lasso.train)
-rlm.try = rlm(loss~.,data=data.lasso.train)
-pred.try = predict(rlm.try,data.test)
-pred.sub = predict(rlm.try,data.submit) #virkar ekki
-MAE.try = mean(abs(exp(data.test$loss) - exp(pred.try)))
-MAE.try 
-
-
-```
 
 
 
@@ -455,7 +470,8 @@ MAE.try
 
 ```{r}
 pred.submit = predict(fit.lm,data.submit.cat)
-Submit= data.frame(id,loss=exp(boost.pred.small))
+Submit= data.frame(id,loss=exp(boost.pred2))
+names(Submit)[2] <- "loss"
 write.csv(Submit,file="Submit.csv",row.names=FALSE)
 ```
 
