@@ -1,3 +1,4 @@
 # Gervigreind
 Lokaverkefni Gervigreind
-bla
+bla 
+12
